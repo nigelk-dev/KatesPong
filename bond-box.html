@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Bond Box</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Lexend:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+/* Layout: a lab bench. The particle box is the hero on the left; the dials sit beside it like instrument controls. */
+:root {
+  --bg: #e9eff5;
+  --panel: #ffffff;
+  --ink: #12202e;
+  --muted: #536477;
+  --line: #cbd7e2;
+  --accent: #1f5fd1;
+  --accent-ink: #ffffff;
+  --solid: #2f7dd1;
+  --liquid: #0f9a8a;
+  --gas: #e0661f;
+  --chip: #eef3f8;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b131c; --panel: #121e2a; --ink: #e3ebf2; --muted: #93a5b7; --line: #25384b;
+    --accent: #6f9fff; --accent-ink: #08111c; --solid: #6aaaf2; --liquid: #36cdb9; --gas: #ff9150; --chip: #192a3a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b131c; --panel: #121e2a; --ink: #e3ebf2; --muted: #93a5b7; --line: #25384b;
+  --accent: #6f9fff; --accent-ink: #08111c; --solid: #6aaaf2; --liquid: #36cdb9; --gas: #ff9150; --chip: #192a3a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+}
+.page {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px;
+}
+header { display: grid; gap: 6px; max-width: 68ch; }
+.eyebrow {
+  margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--accent);
+}
+h1 {
+  margin: 0; font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(38px, 6vw, 60px); line-height: 1; letter-spacing: -.02em; text-wrap: balance;
+}
+.lede { margin: 6px 0 0; color: var(--muted); font-size: 18px; }
+
+.lab { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 880px) { .lab { grid-template-columns: minmax(0, 1fr); } }
+
+.stage { display: grid; gap: 14px; min-width: 0; }
+.canvas-wrap {
+  position: relative; border-radius: 18px; overflow: hidden;
+  background: #0a1622; border: 1px solid var(--line);
+}
+canvas#sim { display: block; width: 100%; height: auto; touch-action: manipulation; }
+.badge {
+  position: absolute; top: 14px; left: 14px;
+  font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: .01em;
+  padding: 4px 14px 6px; border-radius: 999px; color: #08111c; background: #9cc8ff;
+  transition: background .3s;
+}
+.badge[data-phase="liquid"] { background: #6fe3d2; }
+.badge[data-phase="gas"] { background: #ffb37d; }
+.legend {
+  display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center;
+  font-size: 13px; color: var(--muted);
+}
+.legend .ramp { display: inline-block; width: 90px; height: 10px; border-radius: 5px; vertical-align: middle; margin: 0 6px;
+  background: linear-gradient(90deg, #4da8ff, #5ee0d0, #ffd25a, #ff6a3d); }
+.legend .bondkey { display: inline-flex; align-items: center; gap: 6px; }
+.legend .bondkey svg { width: 44px; height: 14px; }
+
+/* phase strip */
+.strip { display: grid; gap: 6px; }
+.strip-bar { position: relative; display: flex; height: 34px; border-radius: 10px; overflow: visible; }
+.seg { display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #fff; min-width: 0; overflow: hidden; white-space: nowrap; transition: flex-basis .25s; }
+.seg.s { background: var(--solid); border-radius: 10px 0 0 10px; }
+.seg.l { background: var(--liquid); }
+.seg.g { background: var(--gas); border-radius: 0 10px 10px 0; }
+:root[data-theme="dark"] .seg, .seg { color: #fff; }
+.marker {
+  position: absolute; top: -6px; bottom: -6px; width: 4px; margin-left: -2px; border-radius: 2px;
+  background: var(--ink); box-shadow: 0 0 0 2px var(--panel); transition: left .08s linear;
+}
+.strip-labels { position: relative; height: 34px; font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+.strip-labels span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; text-align: center; line-height: 1.3; }
+.strip-labels span.edge-l { transform: none; left: 0; }
+.strip-labels span.edge-r { transform: none; right: 0; left: auto; }
+
+/* controls */
+.controls { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 14px; }
+.panel h2 { margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+  padding: 7px 14px; border-radius: 999px;
+}
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.readout { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.big { font-family: var(--font-mono); font-weight: 700; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.small { font-family: var(--font-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; height: 28px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+#temp { accent-color: var(--gas); }
+.range-ends { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-top: -6px; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  border-radius: 10px; padding: 9px 14px; border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn[aria-pressed="true"] { outline: 2px solid var(--gas); }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; }
+.toggles label { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+.toggles input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* what's happening */
+.now h3 { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 800; line-height: 1.1; text-wrap: balance; }
+.now p { margin: 0; }
+.now .phase-word[data-phase="solid"] { color: var(--solid); }
+.now .phase-word[data-phase="liquid"] { color: var(--liquid); }
+.now .phase-word[data-phase="gas"] { color: var(--gas); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 460px) { .stats { grid-template-columns: minmax(0, 1fr); } }
+.stat { background: var(--chip); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; align-content: start; }
+.stat b { font-family: var(--font-mono); font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); line-height: 1.35; }
+
+/* lower sections */
+.lower { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 880px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+.lower h2 { margin: 0 0 4px; font-family: var(--font-display); font-size: 26px; font-weight: 800; }
+.challenges { display: grid; gap: 12px; }
+.challenge { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }
+.challenge h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.challenge p { margin: 0; color: var(--muted); font-size: 15px; }
+details summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--accent); }
+details p { margin-top: 6px !important; color: var(--ink) !important; }
+.facts { display: grid; gap: 14px; }
+.facts p { margin: 0; font-size: 15px; }
+.facts b { font-weight: 600; }
+.note { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">Zoom in on matter</p>
+    <h1>The Bond Box</h1>
+    <p class="lede">Everything is made of tiny particles that pull on each other. Those pulls are the bonds. Turn up the heat or squeeze the box, and watch the bonds hold tight, stretch, and snap.</p>
+  </header>
+
+  <main class="lab">
+    <section class="stage" aria-label="Particle simulation">
+      <div class="canvas-wrap">
+        <canvas id="sim" width="600" height="640" role="img" aria-label="Particles in a box, joined by bond lines"></canvas>
+        <div class="badge" id="badge" data-phase="solid">Solid</div>
+      </div>
+      <div class="strip" aria-hidden="true">
+        <div class="strip-bar">
+          <div class="seg s" id="segS">solid</div>
+          <div class="seg l" id="segL">liquid</div>
+          <div class="seg g" id="segG">gas</div>
+          <div class="marker" id="marker"></div>
+        </div>
+        <div class="strip-labels" id="stripLabels"></div>
+      </div>
+      <div class="legend">
+        <span>Particle colour: slow<span class="ramp"></span>fast</span>
+        <span class="bondkey"><svg viewBox="0 0 44 14" aria-hidden="true"><line x1="7" y1="7" x2="37" y2="7" stroke="#8fb4d8" stroke-width="3"/><circle cx="7" cy="7" r="6" fill="#4da8ff"/><circle cx="37" cy="7" r="6" fill="#4da8ff"/></svg> line = a bond pulling two particles together</span>
+      </div>
+    </section>
+
+    <aside class="controls">
+      <div class="panel">
+        <h2>Pick a substance</h2>
+        <div class="chips" id="subChips">
+          <button class="chip" id="sub-water" data-sub="water" aria-pressed="true">Water</button>
+          <button class="chip" id="sub-nitrogen" data-sub="nitrogen" aria-pressed="false">Nitrogen</button>
+          <button class="chip" id="sub-iron" data-sub="iron" aria-pressed="false">Iron</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="readout">
+          <h2><label for="temp">Temperature</label></h2>
+          <span class="small" id="tempAlt">258 K · 5 °F</span>
+        </div>
+        <div class="big" id="tempBig">−15 °C</div>
+        <input type="range" id="temp" min="-60" max="200" step="1" value="-15">
+        <div class="range-ends"><span id="tMinLbl">−60 °C</span><span id="tMaxLbl">200 °C</span></div>
+        <div class="btns">
+          <button class="btn" id="heatBtn" aria-pressed="false">Heat slowly</button>
+          <button class="btn" id="coolBtn" aria-pressed="false">Cool slowly</button>
+          <button class="btn" id="cubeBtn">New ice cube</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="readout">
+          <h2><label for="press">Pressure</label></h2>
+          <span class="small" id="pressNote">sea level</span>
+        </div>
+        <div class="big" id="pressBig">1.00 atm</div>
+        <input type="range" id="press" min="0" max="100" step="0.5" value="53.7">
+        <div class="chips">
+          <button class="chip" id="p-everest" data-p="0.33">Top of Everest</button>
+          <button class="chip" id="p-sea" data-p="1">Sea level</button>
+          <button class="chip" id="p-cooker" data-p="2">Pressure cooker</button>
+        </div>
+        <div class="toggles">
+          <label><input type="checkbox" id="showBonds" checked> Show bonds</label>
+          <label><input type="checkbox" id="track"> Follow one particle</label>
+        </div>
+      </div>
+
+      <div class="panel now" aria-live="polite">
+        <h3 id="nowTitle"><span class="phase-word" data-phase="solid">Solid</span>: ice</h3>
+        <p id="nowText">The particles are locked in a neat pattern. Bonds hold each one to its neighbours, so it can only jiggle on the spot. That's why a solid keeps its shape.</p>
+        <div class="stats">
+          <div class="stat"><b id="statBonds">5.2</b><span>bonds per particle right now</span></div>
+          <div class="stat"><b id="statSpeed">570 m/s</b><span id="statSpeedLbl">how fast real water molecules jiggle</span></div>
+          <div class="stat"><b id="statBoil">100 °C</b><span>boiling point at this pressure</span></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="lower">
+    <div class="challenges">
+      <h2>Try these</h2>
+      <div class="challenge">
+        <h3>1. Melt the ice cube</h3>
+        <p>Drag the temperature up slowly past 0 °C. Watch the neat pattern break. What happens to the shape of the cube?</p>
+        <details><summary>What should I see?</summary><p>The bonds stop holding particles in fixed spots, so the cube slumps into a puddle across the floor. A liquid takes the shape of its container.</p></details>
+      </div>
+      <div class="challenge">
+        <h3>2. Make tea on Mount Everest</h3>
+        <p>Tap “Top of Everest”. The air pressure up there is only a third of what it is at the beach. Now find the temperature where the water boils.</p>
+        <details><summary>What's the answer?</summary><p>About 71 °C. Less air is pushing down on the water, so particles escape more easily. Climbers' tea is never properly hot.</p></details>
+      </div>
+      <div class="challenge">
+        <h3>3. Use a pressure cooker</h3>
+        <p>Tap “Pressure cooker” and heat the water past 100 °C. Is it boiling yet?</p>
+        <details><summary>Why does this help cooking?</summary><p>Squeezing the water keeps it liquid until about 120 °C. Hotter water cooks food faster.</p></details>
+      </div>
+      <div class="challenge">
+        <h3>4. Strong bonds, weak bonds</h3>
+        <p>Switch between nitrogen and iron. Look at their melting and boiling points. Which one has the stronger bonds?</p>
+        <details><summary>Check your idea</summary><p>Iron. Its atoms are held by strong metallic bonds, so it needs 1538 °C just to melt. Nitrogen's molecules pull on each other so weakly that it boils at −196 °C, which is why it's a gas in the air you breathe.</p></details>
+      </div>
+    </div>
+
+    <div class="panel facts">
+      <h2>Good to know</h2>
+      <p><b>Temperature is speed.</b> When something gets hotter, its particles move faster on average. Cold particles are slow, hot ones zoom.</p>
+      <p><b>What the lines mean.</b> For water, each dot is a whole H₂O molecule. The lines are the pulls between neighbouring molecules, called hydrogen bonds. When water boils, these break, but the molecules themselves stay whole. Steam is still H₂O.</p>
+      <p><b>Melting takes energy.</b> While ice melts, it stays at 0 °C until all of it has turned to water. The heat goes into breaking bonds instead of speeding particles up.</p>
+      <p><b>Real numbers are huge.</b> A glass of water holds about 8 million million million million molecules (8 × 10²⁴). This box shows just 100, drawn flat.</p>
+      <p class="note">This is a simplified model. Real particles move in 3D and are far too small to see, even with a normal microscope.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  // ---------- substances (real data at 1 atm) ----------
+  const R = 8.314;
+  const SUBS = {
+    water:    { tm: 0,     tb: 100,    dh: 40660,  M: 0.018,  min: -60,  max: 200,  step: 1,   dec: 0,
+                names: ["ice", "liquid water", "steam"], part: "water molecules", cube: "New ice cube" },
+    nitrogen: { tm: -210,  tb: -195.8, dh: 5570,   M: 0.028,  min: -240, max: -140, step: 0.5, dec: 1,
+                names: ["solid nitrogen", "liquid nitrogen", "nitrogen gas"], part: "nitrogen molecules", cube: "New frozen block" },
+    iron:     { tm: 1538,  tb: 2862,   dh: 340000, M: 0.0558, min: 800,  max: 3600, step: 10,  dec: 0,
+                names: ["solid iron", "molten iron", "iron vapour"], part: "iron atoms", cube: "New iron block" },
+  };
+  const TEXT = {
+    solid: "The particles are locked in a neat pattern. Bonds hold each one to its neighbours, so it can only jiggle on the spot. That's why a solid keeps its shape.",
+    liquid: "The particles have enough energy to break some bonds, but new ones keep forming. They stay close together and slide past each other. That's why a liquid flows and takes the shape of its container.",
+    gas: "The particles move so fast that bonds can't hold them. They fly apart, bounce off the walls and spread out to fill the whole box. A gas has no shape of its own.",
+  };
+
+  const state = { sub: "water", T: -15, P: 1, showBonds: true, track: false, ramp: 0 };
+
+  const boilC = (S, P) => 1 / (1 / (S.tb + 273.15) - R * Math.log(P) / S.dh) - 273.15;
+  const phaseOf = (S, T, P) => (T < S.tm ? "solid" : T < boilC(S, P) ? "liquid" : "gas");
+  const pFromSlider = (v) => 0.2 * Math.pow(20, v / 100);
+  const sliderFromP = (p) => (100 * Math.log(p / 0.2)) / Math.log(20);
+  const fmtNum = (n, d) => (n < 0 ? "−" : "") + Math.abs(n).toFixed(d);
+
+  // ---------- simulation (reduced units: particle size 1) ----------
+  const N = 100, W = 28, HMAX = 26, HMIN = 12.5, G = 0.12, K_TETHER = 30, A_LAT = 1.12;
+  const x = new Float64Array(N), y = new Float64Array(N), vx = new Float64Array(N), vy = new Float64Array(N);
+  const fx = new Float64Array(N), fy = new Float64Array(N), sg = new Float64Array(N);
+  const sx = new Float64Array(N), sy = new Float64Array(N);
+  let H = 18.7, tether = 1, A = 1, Tstar = 0.1, prevPhase = "solid", bondAvg = 5;
+  const trail = [];
+  let trackIdx = 0;
+
+  // two slightly different particle sizes stop the liquid from snapping into a crystal by itself
+  for (let i = 0; i < N; i++) sg[i] = i % 2 ? 1.05 : 0.95;
+  for (let i = N - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = sg[i]; sg[i] = sg[j]; sg[j] = t; }
+
+  function blockSites() {
+    const cols = 10, h = A_LAT * Math.sqrt(3) / 2, x0 = W / 2 - (cols - 0.5) * A_LAT / 2;
+    for (let i = 0; i < N; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      sx[i] = x0 + c * A_LAT + (r % 2) * A_LAT / 2;
+      sy[i] = 0.6 + r * h;
+    }
+  }
+  function sheetSites() {
+    // fill rows from the floor up, keeping each particle in the row and order nearest to it
+    const per = Math.floor((W - 1.2) / A_LAT), h = A_LAT * Math.sqrt(3) / 2;
+    const idx = [...Array(N).keys()].sort((a, b) => y[a] - y[b]);
+    let k = 0, row = 0;
+    while (k < N) {
+      const n = Math.min(per - (row % 2), N - k);
+      const group = idx.slice(k, k + n).sort((a, b) => x[a] - x[b]);
+      const span = (n - 1) * A_LAT, x0 = W / 2 - span / 2 + (n === per - (row % 2) ? 0 : 0);
+      group.forEach((p, c) => { sx[p] = x0 + c * A_LAT; sy[p] = 0.6 + row * h; });
+      k += n; row++;
+    }
+  }
+  function newCube() {
+    blockSites();
+    for (let i = 0; i < N; i++) { x[i] = sx[i]; y[i] = sy[i]; vx[i] = (Math.random() - .5) * .3; vy[i] = (Math.random() - .5) * .3; }
+    tether = 1; prevPhase = "solid"; trail.length = 0;
+    trackIdx = 45;
+  }
+
+  function forces() {
+    const g = G * (0.25 + 0.75 * (A - 0.35) / 0.65); // gas particles barely feel gravity
+    for (let i = 0; i < N; i++) { fx[i] = 0; fy[i] = -g; }
+    for (let i = 0; i < N; i++) {
+      const xi = x[i], yi = y[i], si = sg[i];
+      for (let j = i + 1; j < N; j++) {
+        const dx = xi - x[j], dy = yi - y[j];
+        const s = (si + sg[j]) * 0.5, s2 = s * s;
+        const r2 = dx * dx + dy * dy;
+        if (r2 > 6.25 * s2) continue;
+        const ir2 = s2 / Math.max(r2, 0.3 * s2), ir6 = ir2 * ir2 * ir2;
+        let f = (48 * ir6 * ir6 - 24 * A * ir6) / Math.max(r2, 0.3 * s2);
+        const mag = Math.abs(f) * Math.sqrt(r2);
+        if (mag > 250) f *= 250 / mag;
+        fx[i] += f * dx; fy[i] += f * dy; fx[j] -= f * dx; fy[j] -= f * dy;
+      }
+    }
+    if (tether > 0.002) {
+      const k = K_TETHER * tether;
+      for (let i = 0; i < N; i++) {
+        let tx = k * (sx[i] - x[i]), ty = k * (sy[i] - y[i]);
+        const m = Math.hypot(tx, ty);
+        if (m > 12) { tx *= 12 / m; ty *= 12 / m; }
+        fx[i] += tx; fy[i] += ty + G * tether; // the lattice carries its own weight
+      }
+    }
+  }
+
+  function step(dt) {
+    for (let i = 0; i < N; i++) {
+      vx[i] += 0.5 * dt * fx[i]; vy[i] += 0.5 * dt * fy[i];
+      x[i] += dt * vx[i]; y[i] += dt * vy[i];
+      if (x[i] < 0.5) { x[i] = 0.5; vx[i] = Math.abs(vx[i]); }
+      else if (x[i] > W - 0.5) { x[i] = W - 0.5; vx[i] = -Math.abs(vx[i]); }
+      if (y[i] < 0.5) { y[i] = 0.5; vy[i] = Math.abs(vy[i]); }
+      else if (y[i] > H - 0.5) { y[i] = H - 0.5; vy[i] = -Math.abs(vy[i]); }
+    }
+    forces();
+    let ke = 0;
+    for (let i = 0; i < N; i++) {
+      vx[i] += 0.5 * dt * fx[i]; vy[i] += 0.5 * dt * fy[i];
+      ke += vx[i] * vx[i] + vy[i] * vy[i];
+    }
+    const Tcur = ke / (2 * N) + 1e-9;
+    let lam = Math.sqrt(1 + (dt / 0.12) * (Tstar / Tcur - 1));
+    lam = Math.min(1.2, Math.max(0.85, lam));
+    for (let i = 0; i < N; i++) { vx[i] *= lam; vy[i] *= lam; }
+  }
+
+  function targets() {
+    const S = SUBS[state.sub], T = state.T, Tb = boilC(S, state.P);
+    const ph = phaseOf(S, T, state.P);
+    let ts;
+    if (ph === "solid") ts = 0.03 + 0.25 * (T - S.min) / (S.tm - S.min);
+    else if (ph === "liquid") ts = 0.30 + 0.13 * (T - S.tm) / Math.max(1e-6, Tb - S.tm);
+    else ts = 1.0 + 3.0 * (T - Tb) / Math.max(1, S.max - Tb);
+    return { ph, ts, H: HMAX - (Math.log(state.P / 0.2) / Math.log(20)) * (HMAX - HMIN) };
+  }
+
+  function advance(realDt) {
+    const t = targets();
+    if (t.ph !== prevPhase) {
+      if (t.ph === "solid") sheetSites();
+      prevPhase = t.ph;
+    }
+    Tstar = t.ts;
+    const k = Math.min(1, realDt * 2.5);
+    tether += ((t.ph === "solid" ? 1 : 0) - tether) * k;
+    A += ((t.ph === "gas" ? 0.35 : 1) - A) * k;
+    H += (t.H - H) * Math.min(1, realDt * 3);
+    for (let s = 0; s < 12; s++) step(0.005);
+    if (state.track) { trail.push(x[trackIdx], y[trackIdx]); if (trail.length > 240) trail.splice(0, 2); }
+  }
+
+  // ---------- drawing ----------
+  const cv = document.getElementById("sim"), ctx = cv.getContext("2d");
+  const VIEW_W = W + 2, VIEW_TOP = HMAX + 4.5, VIEW_BOT = -2.6;
+  let scale = 20, dpr = 1;
+  function resize() {
+    const w = cv.clientWidth || 600;
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    scale = w / VIEW_W;
+    const h = Math.round(scale * (VIEW_TOP - VIEW_BOT));
+    cv.style.height = h + "px";
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  }
+  const X = (wx) => (wx + 1) * scale, Y = (wy) => (VIEW_TOP - wy) * scale;
+
+  const STOPS = [[0, [77, 168, 255]], [0.35, [94, 224, 208]], [0.62, [255, 210, 90]], [1, [255, 106, 61]]];
+  function speedColor(v) {
+    const t = Math.min(1, v / 3.6);
+    for (let i = 1; i < STOPS.length; i++) {
+      if (t <= STOPS[i][0]) {
+        const a = STOPS[i - 1], b = STOPS[i], u = (t - a[0]) / (b[0] - a[0]);
+        return `rgb(${a[1].map((c, k) => Math.round(c + (b[1][k] - c) * u)).join(",")})`;
+      }
+    }
+    return "rgb(255,106,61)";
+  }
+
+  function draw() {
+    const S = SUBS[state.sub];
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cw = cv.width / dpr, ch = cv.height / dpr;
+    const bg = ctx.createLinearGradient(0, 0, 0, ch);
+    bg.addColorStop(0, "#0c1a28"); bg.addColorStop(1, "#08121c");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, cw, ch);
+
+    // faint grid
+    ctx.strokeStyle = "rgba(140,180,220,0.06)"; ctx.lineWidth = 1;
+    for (let gx = 0; gx <= W; gx += 2) { ctx.beginPath(); ctx.moveTo(X(gx), Y(0)); ctx.lineTo(X(gx), Y(H)); ctx.stroke(); }
+    for (let gy = 0; gy <= H; gy += 2) { ctx.beginPath(); ctx.moveTo(X(0), Y(gy)); ctx.lineTo(X(W), Y(gy)); ctx.stroke(); }
+
+    // heater / cooler under the box
+    const frac = (state.T - S.min) / (S.max - S.min);
+    const hot = Math.max(0, (frac - 0.35) / 0.65), cold = Math.max(0, (0.35 - frac) / 0.35);
+    const hy = Y(-0.35), hh = 1.4 * scale;
+    const hg = ctx.createLinearGradient(0, hy, 0, hy + hh);
+    hg.addColorStop(0, `rgba(${Math.round(90 + 165 * hot)},${Math.round(110 + 40 * hot + 100 * cold)},${Math.round(130 - 90 * hot + 125 * cold)},1)`);
+    hg.addColorStop(1, "#0a141e");
+    ctx.fillStyle = hg; ctx.fillRect(X(0), hy, W * scale, hh);
+    if (hot > 0.05) {
+      ctx.fillStyle = `rgba(255,140,60,${0.25 * hot})`;
+      ctx.fillRect(X(0), Y(1.6), W * scale, Y(-0.35) - Y(1.6));
+    }
+    ctx.fillStyle = "rgba(220,235,250,0.75)";
+    ctx.font = `600 ${Math.max(10, scale * 0.6)}px Lexend, system-ui, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(hot > 0.05 ? "heating" : cold > 0.05 ? "cooling" : "", X(W / 2), hy + hh * 0.55);
+
+    // tracked trail
+    if (state.track && trail.length > 4) {
+      ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = Math.max(1, scale * 0.08);
+      ctx.beginPath(); ctx.moveTo(X(trail[0]), Y(trail[1]));
+      for (let i = 2; i < trail.length; i += 2) ctx.lineTo(X(trail[i]), Y(trail[i + 1]));
+      ctx.stroke();
+    }
+
+    // bonds
+    let bonds = 0;
+    ctx.lineCap = "round";
+    ctx.lineWidth = Math.max(1.5, scale * 0.16);
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        const dx = x[i] - x[j], dy = y[i] - y[j];
+        const s = (sg[i] + sg[j]) * 0.5, lim = 1.36 * s;
+        const r2 = dx * dx + dy * dy;
+        if (r2 > lim * lim) continue;
+        bonds++;
+        if (!state.showBonds) continue;
+        const a = Math.min(1, (lim - Math.sqrt(r2)) / (0.3 * s)) * (0.35 + 0.5 * A);
+        ctx.strokeStyle = `rgba(160,200,240,${a.toFixed(3)})`;
+        ctx.beginPath(); ctx.moveTo(X(x[i]), Y(y[i])); ctx.lineTo(X(x[j]), Y(y[j])); ctx.stroke();
+      }
+    }
+    bondAvg += ((2 * bonds) / N - bondAvg) * 0.08;
+
+    // particles
+    for (let i = 0; i < N; i++) {
+      const r = 0.36 * sg[i] * scale, px = X(x[i]), py = Y(y[i]);
+      ctx.fillStyle = speedColor(Math.hypot(vx[i], vy[i]));
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.beginPath(); ctx.arc(px - r * 0.3, py - r * 0.3, r * 0.35, 0, Math.PI * 2); ctx.fill();
+    }
+    if (state.track) {
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = Math.max(2, scale * 0.12);
+      ctx.beginPath(); ctx.arc(X(x[trackIdx]), Y(y[trackIdx]), 0.62 * scale, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    // glass walls and floor
+    ctx.strokeStyle = "rgba(170,205,235,0.75)"; ctx.lineWidth = Math.max(2, scale * 0.18);
+    ctx.beginPath(); ctx.moveTo(X(0), Y(HMAX + 3)); ctx.lineTo(X(0), Y(0)); ctx.lineTo(X(W), Y(0)); ctx.lineTo(X(W), Y(HMAX + 3)); ctx.stroke();
+
+    // piston + weights
+    const plateY = Y(H), plateH = 0.6 * scale;
+    ctx.fillStyle = "#9db6cc"; ctx.fillRect(X(0.15), plateY - plateH, (W - 0.3) * scale, plateH);
+    ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.fillRect(X(0.15), plateY - plateH, (W - 0.3) * scale, Math.max(1, plateH * 0.25));
+    const nW = Math.max(1, Math.min(8, Math.round(state.P * 2)));
+    const bw = 7 * scale, bh = 0.62 * scale, gap = 0.08 * scale;
+    for (let k = 0; k < nW; k++) {
+      const by = plateY - plateH - (k + 1) * (bh + gap);
+      ctx.fillStyle = k % 2 ? "#5d7489" : "#6b8399";
+      ctx.fillRect(X(W / 2) - bw / 2, by, bw, bh);
+    }
+    ctx.fillStyle = "rgba(230,240,250,0.9)";
+    ctx.font = `700 ${Math.max(11, scale * 0.62)}px "JetBrains Mono", monospace`;
+    ctx.textAlign = "left";
+    ctx.fillText(`${state.P.toFixed(2)} atm`, X(W / 2) + bw / 2 + 0.5 * scale, plateY - plateH - Math.min(nW, 2) * (bh + gap) / 2 - gap);
+  }
+
+  // ---------- UI ----------
+  const $ = (id) => document.getElementById(id);
+  const temp = $("temp"), press = $("press");
+  let lastPhase = "";
+
+  function setSubstance(name) {
+    const old = SUBS[state.sub], S = SUBS[name];
+    // keep the same phase and the same spot within it
+    const ph = phaseOf(old, state.T, state.P), tbO = boilC(old, state.P), tbN = boilC(S, state.P);
+    let f, T;
+    if (ph === "solid") { f = (state.T - old.min) / (old.tm - old.min); T = S.min + f * (S.tm - S.min); }
+    else if (ph === "liquid") { f = (state.T - old.tm) / (tbO - old.tm); T = S.tm + f * (tbN - S.tm); }
+    else { f = (state.T - tbO) / (old.max - tbO); T = tbN + f * (S.max - tbN); }
+    state.sub = name;
+    temp.min = S.min; temp.max = S.max; temp.step = S.step;
+    state.T = Math.round(T / S.step) * S.step;
+    temp.value = state.T;
+    document.querySelectorAll("#subChips .chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.sub === name)));
+    $("cubeBtn").textContent = S.cube;
+    lastPhase = "";
+    updateUI();
+  }
+
+  function updateUI() {
+    const S = SUBS[state.sub], T = state.T, P = state.P;
+    const Tb = boilC(S, P), ph = phaseOf(S, T, P);
+    const K = T + 273.15, F = T * 9 / 5 + 32;
+    $("tempBig").textContent = `${fmtNum(T, S.dec)} °C`;
+    $("tempAlt").textContent = `${Math.round(K)} K · ${fmtNum(Math.round(F), 0)} °F`;
+    $("tMinLbl").textContent = `${fmtNum(S.min, 0)} °C`;
+    $("tMaxLbl").textContent = `${fmtNum(S.max, 0)} °C`;
+    $("pressBig").textContent = `${P.toFixed(2)} atm`;
+    $("pressNote").textContent = P < 0.45 ? "thin mountain air" : P < 1.25 ? "about sea level" : P < 2.6 ? "squeezed, like a pressure cooker" : "squeezed very hard";
+
+    // phase strip
+    const span = S.max - S.min;
+    const pS = Math.max(0, (S.tm - S.min) / span) * 100;
+    const pL = Math.max(0, (Math.min(Tb, S.max) - S.tm) / span) * 100;
+    const pG = Math.max(0, 100 - pS - pL);
+    $("segS").style.flexBasis = pS + "%"; $("segL").style.flexBasis = pL + "%"; $("segG").style.flexBasis = pG + "%";
+    $("marker").style.left = ((T - S.min) / span) * 100 + "%";
+    $("stripLabels").innerHTML =
+      `<span style="left:${pS}%">melts<br>${fmtNum(S.tm, S.dec)} °C</span>` +
+      `<span style="left:${pS + pL}%">boils<br>${fmtNum(Tb, S.dec)} °C</span>`;
+
+    const word = ph[0].toUpperCase() + ph.slice(1);
+    $("badge").textContent = word; $("badge").dataset.phase = ph;
+    if (ph + state.sub !== lastPhase) {
+      lastPhase = ph + state.sub;
+      const name = S.names[ph === "solid" ? 0 : ph === "liquid" ? 1 : 2];
+      $("nowTitle").innerHTML = `<span class="phase-word" data-phase="${ph}">${word}</span>: ${name}`;
+      $("nowText").textContent = TEXT[ph];
+    }
+    const vrms = Math.sqrt((3 * R * K) / S.M);
+    $("statSpeed").textContent = `${Math.round(vrms).toLocaleString("en")} m/s`;
+    $("statSpeedLbl").textContent = `average speed of real ${S.part} (${Math.round(vrms * 3.6).toLocaleString("en")} km/h!)`;
+    $("statBoil").textContent = `${fmtNum(Tb, S.dec)} °C`;
+  }
+
+  temp.addEventListener("input", () => { state.T = parseFloat(temp.value); stopRamp(); updateUI(); });
+  press.addEventListener("input", () => { state.P = pFromSlider(parseFloat(press.value)); updateUI(); });
+  document.querySelectorAll("[data-p]").forEach((b) => b.addEventListener("click", () => {
+    state.P = parseFloat(b.dataset.p); press.value = sliderFromP(state.P); updateUI();
+  }));
+  document.querySelectorAll("#subChips .chip").forEach((b) => b.addEventListener("click", () => setSubstance(b.dataset.sub)));
+  $("showBonds").addEventListener("change", (e) => { state.showBonds = e.target.checked; });
+  $("track").addEventListener("change", (e) => {
+    state.track = e.target.checked; trail.length = 0;
+    if (state.track) { // pick the particle nearest the middle of the group
+      let best = 0, bd = 1e9; const cx = x.reduce((a, b) => a + b, 0) / N, cy = y.reduce((a, b) => a + b, 0) / N;
+      for (let i = 0; i < N; i++) { const d = (x[i] - cx) ** 2 + (y[i] - cy) ** 2; if (d < bd) { bd = d; best = i; } }
+      trackIdx = best;
+    }
+  });
+  $("cubeBtn").addEventListener("click", () => {
+    const S = SUBS[state.sub];
+    if (state.T >= S.tm) { state.T = Math.round((S.tm - 0.25 * (S.tm - S.min)) / S.step) * S.step; temp.value = state.T; }
+    stopRamp(); newCube(); updateUI();
+  });
+  function stopRamp() { state.ramp = 0; $("heatBtn").setAttribute("aria-pressed", "false"); $("coolBtn").setAttribute("aria-pressed", "false"); $("heatBtn").textContent = "Heat slowly"; $("coolBtn").textContent = "Cool slowly"; }
+  function startRamp(dir) {
+    if (state.ramp === dir) { stopRamp(); return; }
+    stopRamp(); state.ramp = dir;
+    const b = $(dir > 0 ? "heatBtn" : "coolBtn"); b.setAttribute("aria-pressed", "true"); b.textContent = "Stop";
+  }
+  $("heatBtn").addEventListener("click", () => startRamp(1));
+  $("coolBtn").addEventListener("click", () => startRamp(-1));
+
+  // ---------- loop ----------
+  let last = performance.now(), uiTick = 0;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (state.ramp) {
+      const S = SUBS[state.sub];
+      let T = state.T + state.ramp * dt * (S.max - S.min) / 40;
+      if (T >= S.max || T <= S.min) { T = Math.min(S.max, Math.max(S.min, T)); stopRamp(); }
+      state.T = T; temp.value = T;
+      updateUI();
+    }
+    advance(dt);
+    draw();
+    if ((uiTick += dt) > 0.25) { uiTick = 0; $("statBonds").textContent = bondAvg.toFixed(1); }
+    requestAnimationFrame(frame);
+  }
+
+  window.__bond = { state, x, y, vx, vy, advance, get bondAvg() { return bondAvg; }, get H() { return H; } };
+  newCube();
+  press.value = sliderFromP(1);
+  resize();
+  new ResizeObserver(resize).observe(cv);
+  updateUI();
+  draw();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
