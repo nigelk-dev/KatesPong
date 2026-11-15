@@ -1,0 +1,9 @@
+/* Your own style tweaks go here. */
+.repo-card {
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.repo-card p { margin: 0.25rem 0 0; }
+.repo-meta { font-size: 0.85em; opacity: 0.7; }

@@ -1,0 +1,11 @@
+---
+title: "Hi, I'm Nigel 👋"
+---
+
+Welcome to my website. Replace this text with a short introduction:
+who you are, what you do, and what people will find here.
+
+## What's here
+
+- [Projects](projects.qmd): things I've built, pulled live from GitHub
+- [About](about.qmd): more about me and how to get in touch

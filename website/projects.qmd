@@ -1,0 +1,42 @@
+---
+title: "Projects"
+---
+
+My public GitHub repositories. This list updates automatically each time someone visits the page.
+
+::: {#repos}
+Loading…
+:::
+
+```{=html}
+<script>
+(async () => {
+  const box = document.getElementById("repos");
+  try {
+    const res = await fetch("https://api.github.com/users/nigelk-dev/repos?sort=updated&per_page=100");
+    if (!res.ok) throw new Error(res.status);
+    const repos = (await res.json()).filter(r => !r.fork);
+    if (!repos.length) { box.textContent = "No public repositories yet."; return; }
+    box.innerHTML = "";
+    for (const r of repos) {
+      const card = document.createElement("div");
+      card.className = "repo-card";
+      const a = document.createElement("a");
+      a.href = r.html_url; a.textContent = r.name;
+      const strong = document.createElement("strong"); strong.appendChild(a);
+      card.appendChild(strong);
+      if (r.description) {
+        const p = document.createElement("p"); p.textContent = r.description; card.appendChild(p);
+      }
+      const meta = document.createElement("p"); meta.className = "repo-meta";
+      meta.textContent = [r.language, "★ " + r.stargazers_count,
+        "updated " + new Date(r.pushed_at).toLocaleDateString()].filter(Boolean).join(" · ");
+      card.appendChild(meta);
+      box.appendChild(card);
+    }
+  } catch (e) {
+    box.innerHTML = 'Couldn\'t load projects right now. See them on <a href="https://github.com/nigelk-dev">GitHub</a>.';
+  }
+})();
+</script>
+```
